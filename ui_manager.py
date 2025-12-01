@@ -6,6 +6,7 @@ import tkinter.scrolledtext as tkst
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 #Mapping Libraries
 from geolocator import Geolocator
 import smopy
@@ -53,7 +54,7 @@ class UIManager():
 
         self.entryBox = tk.Entry(self.submitFrame, bg = self.elementColor, fg = self.textColor, font = self.textFont)
         self.entryBox.pack(side = "left")
-        self.entryBox.insert(0, "23.120.107.159")
+        self.entryBox.insert(0, "Enter destination")
 
         self.submitButton = tk.Button(self.submitFrame, text = "Submit",
                                       bg = self.elementColor, fg = self.textColor, font = self.buttonFont,
@@ -86,11 +87,12 @@ class UIManager():
         for address in addressList:
             locator = Geolocator()
             locationInformation = (locator.GetLocationInformation(address))
-            if (locationInformation['IPv4'] == 'Not found'): continue
-            
-            lon, lat = locationInformation['longitude'], locationInformation['latitude']
+            print (locationInformation)
+            if (locationInformation['status'] == 'fail'): continue
+            lon, lat = locationInformation['lon'], locationInformation['lat']
             points.append([lon, lat])
 
+        if (points == []): return
         self.RenderPointsToMap(points)
 
     def ClearFrame(self, frame):
@@ -117,9 +119,14 @@ class UIManager():
         fig.set_facecolor(self.panelColor)
         ax.imshow(img)
         ax.scatter(xPx, yPx, c = self.highlightRedColor, s = 40) #c: color, s: size of point
+        ax.plot(xPx, yPx, c = self.highlightGreenColor, linewidth = 2)
 
         #Convert matplotlib plot to tkinter canvas
         self.ClearFrame(self.mapFrame)
         canvas = FigureCanvasTkAgg(fig, master = self.mapFrame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill = tk.BOTH, expand = True)
+
+        toolbar = NavigationToolbar2Tk(canvas, self.mapFrame)
+        toolbar.update()
+        toolbar.pack(fill = "x")
