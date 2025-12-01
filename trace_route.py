@@ -19,7 +19,8 @@ class Traceroute():
 
         port = 33434 #Default port for traceroute
         ttl = 1
-
+        
+        self.OutputCallback(f"Running trace route for address: {destinationIP}\n")
         while True:
             ipPacket = IP(dst = destination, ttl = ttl)
             udpPacket = UDP(dport = port)

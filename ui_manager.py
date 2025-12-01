@@ -12,6 +12,7 @@ from geolocator import Geolocator
 import smopy
 #Math Libraries
 import numpy as np
+import random
 #Networking Libraries
 from trace_route import Traceroute
 from sniffer import NetworkSniffer
@@ -45,6 +46,10 @@ class UIManager():
         self.SetupMapFrame()
         #-------------------------------
 
+        #--Variables for Sniffer---
+        self.sniffedDests = []
+        #--------------------------=
+
     def SetupMapFrame(self):
         self.mapFrame = tk.Frame(self.root, bg = self.bgColor)
         self.mapFrame.pack(anchor = tk.CENTER, fill = "y", expand = True, padx = 10, pady = 10)
@@ -69,7 +74,7 @@ class UIManager():
         self.sniffFrame = tk.Frame(self.root, bg = self.bgColor)
         self.sniffFrame.pack(anchor = tk.CENTER, padx = 10, pady = 10)
 
-        self.sniffLabel = tk.Label(self.sniffFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "Sniff # of Packets:")
+        self.sniffLabel = tk.Label(self.sniffFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "# of Packets:")
         self.sniffLabel.grid(row = 0, column = 0)
 
         self.sniffCount = tk.Spinbox(self.sniffFrame, from_ = 0, to = 100,
@@ -79,7 +84,12 @@ class UIManager():
         self.sniffButton = tk.Button(self.sniffFrame, text = 'Sniff Network',
                                       bg = self.accentColor, fg = self.textColor, font = self.textFont,
                                       command = lambda: self.SniffButton())
-        self.sniffButton.grid(row = 0, column = 2)
+        self.sniffButton.grid(row = 0, column = 2, sticky = "w")
+
+        self.traceButton = tk.Button(self.sniffFrame, text = 'Trace Sniffed Packet Destinations',
+                                      bg = self.accentColor, fg = self.textColor, font = self.textFont,
+                                      command = lambda: self.TraceSniffedPackets())
+        self.traceButton.grid(row = 1, column = 2)
 
         #---Display Traceroute Printout---
         self.scrollText = tkst.ScrolledText(self.root, bg = self.panelColor, fg = self.textColor, font = self.textFont)
@@ -91,14 +101,39 @@ class UIManager():
         self.scrollText.insert(tk.END, text)
         self.scrollText.configure(state = "disabled")
 
+    def TraceSniffedPackets(self):
+        if (len(self.sniffedDests) < 1): return #No sniffing results have been generated yet
+
+        addressList = []
+        for dest in self.sniffedDests:
+            if (dest == "255.255.255.255"): continue #Skip broadcasts
+
+            tr = Traceroute(self.PrintLine, dest)
+            addresses = tr.GetAddresses()
+            addressList.append(addresses)
+
+        pointGroups = []
+        for addressGroup in addressList:
+            points = []
+            for address in addressGroup:
+                locator = Geolocator()
+                locationInformation = (locator.GetLocationInformation(address))
+                if (locationInformation['status'] == 'fail'): continue
+                lon, lat = locationInformation['lon'], locationInformation['lat']
+                points.append([lon, lat])
+            pointGroups.append(points)
+
+        self.RenderPointGroupsToMap(pointGroups)
+        
     def SniffButton(self):
         count = int(self.sniffCount.get())
         sniffer = NetworkSniffer(self.PrintLine, count)
+        self.sniffedDests = sniffer.GetDestinations()
         
     def SubmitButton(self):
-        self.scrollText.configure(state='normal')
-        self.scrollText.delete("1.0", tk.END)
-        self.scrollText.configure(state='disabled')
+        #self.scrollText.configure(state='normal')
+        #self.scrollText.delete("1.0", tk.END)
+        #self.scrollText.configure(state='disabled')
         dest = self.entryBox.get()
 
         tr = Traceroute(self.PrintLine, dest)
@@ -142,6 +177,55 @@ class UIManager():
         ax.imshow(img)
         ax.scatter(xPx, yPx, c = self.highlightRedColor, s = 40) #c: color, s: size of point
         ax.plot(xPx, yPx, c = self.highlightGreenColor, linewidth = 2)
+
+        #Convert matplotlib plot to tkinter canvas
+        self.ClearFrame(self.mapFrame)
+        canvas = FigureCanvasTkAgg(fig, master = self.mapFrame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill = tk.BOTH, expand = True)
+
+        toolbar = NavigationToolbar2Tk(canvas, self.mapFrame)
+        toolbar.update()
+        toolbar.pack(fill = "x")
+
+    def RenderPointGroupsToMap(self, pointGroups): #[points[lon, lat], ...]
+        print (pointGroups)
+        #Generate map image around points
+        flatPointsList = []
+        for points in pointGroups:
+            for point in points:
+                flatPointsList.append(point)
+
+        npPoints = np.array(flatPointsList)
+        lonMin, lonMax = npPoints[:, 0].min(), npPoints[:, 0].max()
+        latMin, latMax = npPoints[:, 1].min(), npPoints[:, 1].max()
+        bounds = (
+            latMin, lonMin,
+            latMax, lonMax
+        )
+        
+        map = smopy.Map(bounds)
+       
+        fig, ax = plt.subplots()
+        img = map.to_pil()
+
+        #Setup plot for map and points
+        fig.set_facecolor(self.panelColor)
+        ax.imshow(img)
+
+        for points in pointGroups:
+            if (len(points) < 1): continue
+
+            points = np.array(points)
+            xPx, yPx = map.to_pixels(points[:, 1], points[:, 0]) #point in form (lat, lon)
+
+            r = random.randint(0, 255) / 255
+            g = random.randint(0, 255) / 255
+            b = random.randint(0, 255) / 255
+            randColor = (r, g, b)
+
+            ax.scatter(xPx, yPx, c = randColor, s = 40)
+            ax.plot(xPx, yPx, c = randColor, linewidth = 2)
 
         #Convert matplotlib plot to tkinter canvas
         self.ClearFrame(self.mapFrame)
