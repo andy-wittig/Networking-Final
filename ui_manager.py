@@ -34,7 +34,7 @@ class UIManager():
         self.elementColor = "#898989"
         self.textColor    = "#E0E0E0"
         #Fonts
-        self.buttonFont = font.Font(family = "Cascadia Code", size = 14, weight = "bold")
+        self.buttonFont = font.Font(family = "Cascadia Code", size = 12, weight = "bold")
         self.textFont = font.Font(family = "Cascadia Code", size = 14)
         #---------------------
 
@@ -43,20 +43,23 @@ class UIManager():
         self.root.geometry(f"{defaultSize[0]}x{defaultSize[1]}")
         self.root.configure(bg = self.bgColor)
 
-        self.SetupMapFrame()
+        self.SetupWidgets()
         #-------------------------------
 
         #--Variables for Sniffer---
         self.sniffedDests = []
         #--------------------------=
 
-    def SetupMapFrame(self):
+    def SetupWidgets(self):
         self.mapFrame = tk.Frame(self.root, bg = self.bgColor)
-        self.mapFrame.pack(anchor = tk.CENTER, fill = "y", expand = True, padx = 10, pady = 10)
+        self.mapFrame.pack(anchor = tk.CENTER, fill = "both", expand = True, padx = 10, pady = 10)
+
+        self.optionsFrame = tk.Frame(self.root, bg = self.panelColor)
+        self.optionsFrame.pack(anchor = tk.CENTER)
 
         #---Submit IP Address Frame---
-        self.submitFrame = tk.Frame(self.root, bg = self.bgColor)
-        self.submitFrame.pack(anchor = tk.CENTER, padx = 10, pady = 10)
+        self.submitFrame = tk.Frame(self.optionsFrame, bg = self.bgColor)
+        self.submitFrame.pack(side = "left", padx = 10, pady = 10)
 
         self.traceLabel = tk.Label(self.submitFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "Trace Route:")
         self.traceLabel.grid(row = 0, column = 0)
@@ -71,8 +74,8 @@ class UIManager():
         self.submitButton.grid(row = 0, column = 2)
 
         #---Sniffing---
-        self.sniffFrame = tk.Frame(self.root, bg = self.bgColor)
-        self.sniffFrame.pack(anchor = tk.CENTER, padx = 10, pady = 10)
+        self.sniffFrame = tk.Frame(self.optionsFrame, bg = self.bgColor)
+        self.sniffFrame.pack(side = "left", padx = 10, pady = 10)
 
         self.sniffLabel = tk.Label(self.sniffFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "# of Packets:")
         self.sniffLabel.grid(row = 0, column = 0)
@@ -82,17 +85,17 @@ class UIManager():
         self.sniffCount.grid(row = 0, column = 1)
 
         self.sniffButton = tk.Button(self.sniffFrame, text = 'Sniff Network',
-                                      bg = self.accentColor, fg = self.textColor, font = self.textFont,
+                                      bg = self.accentColor, fg = self.textColor, font = self.buttonFont,
                                       command = lambda: self.SniffButton())
         self.sniffButton.grid(row = 0, column = 2, sticky = "w")
 
         self.traceButton = tk.Button(self.sniffFrame, text = 'Trace Sniffed Packet Destinations',
-                                      bg = self.accentColor, fg = self.textColor, font = self.textFont,
+                                      bg = self.accentColor, fg = self.textColor, font = self.buttonFont,
                                       command = lambda: self.TraceSniffedPackets())
         self.traceButton.grid(row = 1, column = 2)
 
         #---Display Traceroute Printout---
-        self.scrollText = tkst.ScrolledText(self.root, bg = self.panelColor, fg = self.textColor, font = self.textFont)
+        self.scrollText = tkst.ScrolledText(self.root, bg = self.panelColor, fg = self.textColor, font = self.textFont, height = 10)
         self.scrollText.pack(fill = "both", expand = True, padx = 10, pady = 10)
         self.scrollText.configure(state = "disabled")
 
@@ -118,7 +121,7 @@ class UIManager():
         for addressGroup in addressList:
             points = []
             for address in addressGroup:
-                locator = Geolocator()
+                locator = Geolocator(self.PrintLine)
                 locationInformation = (locator.GetLocationInformation(address))
                 if (locationInformation['status'] == 'fail'): continue
                 lon, lat = locationInformation['lon'], locationInformation['lat']
@@ -175,7 +178,10 @@ class UIManager():
 
         #Setup plot for map and points
         fig.set_facecolor(self.panelColor)
+        fig.tight_layout(pad = 0)
+        ax.set_axis_off()
         ax.imshow(img)
+
         ax.scatter(xPx, yPx, c = self.highlightRedColor, s = 40) #c: color, s: size of point
         ax.plot(xPx, yPx, c = self.highlightGreenColor, linewidth = 2)
 
@@ -212,6 +218,8 @@ class UIManager():
 
         #Setup plot for map and points
         fig.set_facecolor(self.panelColor)
+        fig.tight_layout(pad = 0)
+        ax.set_axis_off()
         ax.imshow(img)
 
         for points in pointGroups:
