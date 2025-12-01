@@ -8,10 +8,13 @@ class NetworkSniffer():
         self.destList = []
         self.srcList = []
 
-        if (count < 1): #Indefinite sniffing
-            self.OutputCallback(f"Running packet sniffer...\n")
-            capture = sniff(filter = "ip", prn = self.packetCallback)
-        else:
+        if (count < 1): #Async sniffing
+            self.OutputCallback(f"Running packet sniffer for 20 seconds...\n")
+            capture = AsyncSniffer(filter = "ip", prn = self.packetCallback)
+            capture.start()
+            time.sleep(20)
+            capture.stop()
+        else: #Sniff n packets
             self.OutputCallback(f"Running packet sniffer for {count} count(s):\n")
             capture = sniff(filter = "ip", prn = self.packetCallback, count = count)
 

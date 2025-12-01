@@ -61,7 +61,7 @@ class UIManager():
         self.traceLabel = tk.Label(self.submitFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "Trace Route:")
         self.traceLabel.grid(row = 0, column = 0)
 
-        self.entryBox = tk.Entry(self.submitFrame, bg = self.elementColor, fg = self.textColor, font = self.textFont)
+        self.entryBox = tk.Entry(self.submitFrame, bg = self.panelColor, fg = self.textColor, font = self.textFont)
         self.entryBox.grid(row = 0, column = 1)
         self.entryBox.insert(0, "Enter destination")
 
@@ -110,6 +110,8 @@ class UIManager():
 
             tr = Traceroute(self.PrintLine, dest)
             addresses = tr.GetAddresses()
+            
+            if (len(addresses) < 1): continue
             addressList.append(addresses)
 
         pointGroups = []
@@ -142,9 +144,8 @@ class UIManager():
 
         points = []
         for address in addressList:
-            locator = Geolocator()
+            locator = Geolocator(self.PrintLine)
             locationInformation = (locator.GetLocationInformation(address))
-            print (locationInformation)
             if (locationInformation['status'] == 'fail'): continue
             lon, lat = locationInformation['lon'], locationInformation['lat']
             points.append([lon, lat])

@@ -27,16 +27,20 @@ class Traceroute():
 
             packet = ipPacket / udpPacket #Combine headers
 
+            startTime = time.time()
             reply = sr1(packet, timeout = timeout, verbose = 0) #Send packet and recieve reply
+            endTime = time.time()
 
             if (reply is None):
-                self.OutputCallback(f"{ttl}\t* Request timed out.\n")
+                self.OutputCallback(f"{ttl:<3}    * Request timed out.\n")
             elif (reply.type == 3): #Destination reached
-                self.OutputCallback(f"{ttl}\t{reply.src}\n")
+                rtt = (endTime - startTime) * 1000
+                self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms\n")
                 self.addresses.append(reply.src)
                 break
             else:
-                self.OutputCallback(f"{ttl}\t{reply.src}\n")
+                rtt = (endTime - startTime) * 1000
+                self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms\n")
                 self.addresses.append(reply.src)
 
             ttl += 1
