@@ -14,6 +14,7 @@ import smopy
 import numpy as np
 #Networking Libraries
 from trace_route import Traceroute
+from sniffer import NetworkSniffer
 
 class UIManager():
     def __init__(self):
@@ -52,26 +53,47 @@ class UIManager():
         self.submitFrame = tk.Frame(self.root, bg = self.bgColor)
         self.submitFrame.pack(anchor = tk.CENTER, padx = 10, pady = 10)
 
+        self.traceLabel = tk.Label(self.submitFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "Trace Route:")
+        self.traceLabel.grid(row = 0, column = 0)
+
         self.entryBox = tk.Entry(self.submitFrame, bg = self.elementColor, fg = self.textColor, font = self.textFont)
-        self.entryBox.pack(side = "left")
+        self.entryBox.grid(row = 0, column = 1)
         self.entryBox.insert(0, "Enter destination")
 
         self.submitButton = tk.Button(self.submitFrame, text = "Submit",
-                                      bg = self.elementColor, fg = self.textColor, font = self.buttonFont,
+                                      bg = self.accentColor, fg = self.textColor, font = self.buttonFont,
                                       command = lambda: self.SubmitButton())
-        self.submitButton.pack(side = "right")
-        #------------------------------
+        self.submitButton.grid(row = 0, column = 2)
+
+        #---Sniffing---
+        self.sniffFrame = tk.Frame(self.root, bg = self.bgColor)
+        self.sniffFrame.pack(anchor = tk.CENTER, padx = 10, pady = 10)
+
+        self.sniffLabel = tk.Label(self.sniffFrame, bg = self.bgColor, fg = self.textColor, font = self.textFont, text = "Sniff # of Packets:")
+        self.sniffLabel.grid(row = 0, column = 0)
+
+        self.sniffCount = tk.Spinbox(self.sniffFrame, from_ = 0, to = 100,
+                                     bg = self.panelColor, fg = self.textColor, font = self.textFont)
+        self.sniffCount.grid(row = 0, column = 1)
+
+        self.sniffButton = tk.Button(self.sniffFrame, text = 'Sniff Network',
+                                      bg = self.accentColor, fg = self.textColor, font = self.textFont,
+                                      command = lambda: self.SniffButton())
+        self.sniffButton.grid(row = 0, column = 2)
 
         #---Display Traceroute Printout---
         self.scrollText = tkst.ScrolledText(self.root, bg = self.panelColor, fg = self.textColor, font = self.textFont)
         self.scrollText.pack(fill = "both", expand = True, padx = 10, pady = 10)
         self.scrollText.configure(state = "disabled")
-        #---------------------------------
 
     def PrintLine(self, text):
         self.scrollText.configure(state = "normal")
         self.scrollText.insert(tk.END, text)
         self.scrollText.configure(state = "disabled")
+
+    def SniffButton(self):
+        count = int(self.sniffCount.get())
+        sniffer = NetworkSniffer(self.PrintLine, count)
         
     def SubmitButton(self):
         self.scrollText.configure(state='normal')
