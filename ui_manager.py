@@ -51,11 +51,16 @@ class UIManager():
         #--------------------------=
 
     def SetupWidgets(self):
+        self.root.columnconfigure(0, weight = 1)
+        self.root.rowconfigure(0, weight = 1)
+        self.root.rowconfigure(1, weight = 1)
+        self.root.rowconfigure(2, weight = 1)
+
         self.mapFrame = tk.Frame(self.root, bg = self.bgColor)
-        self.mapFrame.pack(anchor = tk.CENTER, fill = "both", expand = True, padx = 10, pady = 10)
+        self.mapFrame.grid(row = 0, column = 0, sticky="nsew", padx = 10, pady = 10)
 
         self.optionsFrame = tk.Frame(self.root, bg = self.panelColor)
-        self.optionsFrame.pack(anchor = tk.CENTER)
+        self.optionsFrame.grid(row = 1, column = 0, padx = 10, pady = 10)
 
         #---Submit IP Address Frame---
         self.submitFrame = tk.Frame(self.optionsFrame, bg = self.bgColor)
@@ -96,7 +101,7 @@ class UIManager():
 
         #---Display Traceroute Printout---
         self.scrollText = tkst.ScrolledText(self.root, bg = self.panelColor, fg = self.textColor, font = self.textFont, height = 10)
-        self.scrollText.pack(fill = "both", expand = True, padx = 10, pady = 10)
+        self.scrollText.grid(row = 2, column = 0, sticky="nsew", padx = 10, pady = 10)
         self.scrollText.configure(state = "disabled")
 
     def PrintLine(self, text):
