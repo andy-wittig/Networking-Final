@@ -43,19 +43,31 @@ class Traceroute():
 
             if (reply is None):
                 self.OutputCallback(f"{ttl:<3}    * Request timed out.\n")
-            elif (reply.type == 3): #Destination reached
-                rtt = (endTime - startTime) * 1000
-                self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms\n")
-                self.addresses.append(reply.src)
-                break
+            elif (reply.haslayer(ICMP)):
+                icmpType = reply.getlayer(ICMP).type
+                icmpCode = reply.getlayer(ICMP).code
+
+                if (icmpType == 11): #Intermediate router
+                    rtt = (endTime - startTime) * 1000
+                    self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    TTL expired\n")
+                    self.addresses.append(reply.src)
+                elif (icmpType == 3 and icmpCode == 3): #Destination reached
+                    rtt = (endTime - startTime) * 1000
+                    self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    Destination reached\n")
+                    self.addresses.append(reply.src)
+                    self.OutputCallback("Route complete.\n")
+                    break
+                else:
+                    rtt = (endTime - startTime) * 1000
+                    self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    ICMP type: {icmpType}, Code: {icmpCode}\n")
+                    self.addresses.append(reply.src)
             else:
                 rtt = (endTime - startTime) * 1000
-                self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms\n")
+                self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    Unkown reply\n")
                 self.addresses.append(reply.src)
 
             ttl += 1
-
-            if (ttl == maxHops):
+            if (ttl >= maxHops):
                 break
 
 

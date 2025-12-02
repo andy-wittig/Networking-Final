@@ -110,6 +110,7 @@ class UIManager():
         self.scrollText.configure(state = "normal")
         self.scrollText.insert(tk.END, text)
         self.scrollText.configure(state = "disabled")
+        self.scrollText.see(tk.END)
 
     def TraceSniffedPackets(self):
         def worker():
@@ -129,15 +130,18 @@ class UIManager():
                 addressList.append(addresses)
 
             pointGroups = []
-            for addressGroup in addressList:
+            for index, addressGroup in enumerate(addressList):
+                self.PrintLine(f"Geographic Iteration: {index}\n") #TODO: Find message to display that is more informative!
                 points = []
                 for address in addressGroup:
                     locator = Geolocator(self.PrintLine)
                     locationInformation = (locator.GetLocationInformation(address))
                     if (locationInformation['status'] == 'fail'): continue
+
                     lon, lat = locationInformation['lon'], locationInformation['lat']
                     points.append([lon, lat])
                 pointGroups.append(points)
+                time.sleep(1.5) #Sleep to avoid overloading server with requests
 
             self.RenderPointGroupsToMap(pointGroups)
     
@@ -149,25 +153,30 @@ class UIManager():
         self.sniffedDests = sniffer.GetDestinations()
         
     def SubmitButton(self):
-        #self.scrollText.configure(state='normal')
-        #self.scrollText.delete("1.0", tk.END)
-        #self.scrollText.configure(state='disabled')
-        dest = self.entryBox.get()
+        def worker():
+            #self.scrollText.configure(state='normal')
+            #self.scrollText.delete("1.0", tk.END)
+            #self.scrollText.configure(state='disabled')
+            dest = self.entryBox.get()
 
-        tr = Traceroute(self.PrintLine, dest)
-        addressList = tr.GetAddresses()
-        if (addressList == []): return
+            tr = Traceroute(self.PrintLine, dest)
+            while (tr.IsThreadActive()):
+                time.sleep(0.01) 
+            
+            addressList = tr.GetAddresses()
+            if (addressList == []): return
 
-        points = []
-        for address in addressList:
-            locator = Geolocator(self.PrintLine)
-            locationInformation = (locator.GetLocationInformation(address))
-            if (locationInformation['status'] == 'fail'): continue
-            lon, lat = locationInformation['lon'], locationInformation['lat']
-            points.append([lon, lat])
+            points = []
+            for address in addressList:
+                locator = Geolocator(self.PrintLine)
+                locationInformation = (locator.GetLocationInformation(address))
+                if (locationInformation['status'] == 'fail'): continue
+                lon, lat = locationInformation['lon'], locationInformation['lat']
+                points.append([lon, lat])
 
-        if (points == []): return
-        self.RenderPointsToMap(points)
+            if (points == []): return
+            self.RenderPointsToMap(points)
+        threading.Thread(target = worker, daemon = True).start()
 
     def ClearFrame(self, frame):
         for widget in frame.winfo_children():

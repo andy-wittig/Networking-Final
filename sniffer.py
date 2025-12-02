@@ -31,6 +31,7 @@ class NetworkSniffer():
     def RunSniffer(self):
         self.OutputCallback(f"Running packet sniffer for {self.count} count(s):\n")
         capture = sniff(filter = "ip", prn = self.packetCallback, count = self.count)
+        self.OutputCallback(f"Sniffing complete for {self.count} packets.\n")
 
     def packetCallback(self, packet):
         #Process the sniffed packets

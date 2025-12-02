@@ -7,7 +7,12 @@ class Geolocator():
         self.OutputCallback = callback
 
     def GetLocationInformation(self, ipv4Address):
-        response = requests.get(f"http://ip-api.com/json/{ipv4Address}").json()
+        try:
+            response = requests.get(f"https://ip-api.com/json/{ipv4Address}", timeout = 5).json()
+        except requests.RequestException as e:
+            self.OutputCallback(f"Error locating {ipv4Address:<15}: {e}\n")
+            return {'status': 'fail'}
+        
         if (response['status'] == 'fail'):
             self.OutputCallback(f"Locating address: {ipv4Address:<15}    "
                                 f"Status: {response['status']}    "
