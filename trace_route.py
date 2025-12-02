@@ -1,9 +1,10 @@
-#---Networking Libraries---
+#---Libraries---
 import socket
 import struct
 import time
 from scapy.all import *
 import argparse
+import threading
 #--------------------------
 
 class Traceroute():
@@ -16,13 +17,22 @@ class Traceroute():
         except socket.gaierror:
             self.OutputCallback(f"Cannot resolve host: {destination}\n")
             return
+        
+        self.thread = threading.Thread(target = self.RunTraceRoute,
+                                  args = (destination, destinationIP, maxHops, timeout)) #Runs on seperate thread so UI doesn't freeze
+        self.thread.daemon = True
+        self.thread.start()
 
+    def IsThreadActive(self):
+        return self.thread.is_alive()
+
+    def RunTraceRoute(self, dest, destIP, maxHops, timeout):
         port = 33434 #Default port for traceroute
         ttl = 1
         
-        self.OutputCallback(f"Running trace route for address: {destinationIP}\n")
+        self.OutputCallback(f"Running trace route for address: {destIP}\n")
         while True:
-            ipPacket = IP(dst = destination, ttl = ttl)
+            ipPacket = IP(dst = dest, ttl = ttl)
             udpPacket = UDP(dport = port)
 
             packet = ipPacket / udpPacket #Combine headers
@@ -47,6 +57,7 @@ class Traceroute():
 
             if (ttl == maxHops):
                 break
+
 
     def GetAddresses(self):
         return self.addresses

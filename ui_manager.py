@@ -13,9 +13,11 @@ import smopy
 #Math Libraries
 import numpy as np
 import random
+import time
 #Networking Libraries
 from trace_route import Traceroute
 from sniffer import NetworkSniffer
+import threading
 
 class UIManager():
     def __init__(self):
@@ -110,30 +112,36 @@ class UIManager():
         self.scrollText.configure(state = "disabled")
 
     def TraceSniffedPackets(self):
-        if (len(self.sniffedDests) < 1): return #No sniffing results have been generated yet
+        def worker():
+            if (len(self.sniffedDests) < 1): return #No sniffing results have been generated yet
 
-        addressList = []
-        for dest in self.sniffedDests:
-            if (dest == "255.255.255.255"): continue #Skip broadcasts
+            addressList = []
+            for dest in self.sniffedDests:
+                if (dest == "255.255.255.255"): continue #Skip broadcasts
 
-            tr = Traceroute(self.PrintLine, dest)
-            addresses = tr.GetAddresses()
-            
-            if (len(addresses) < 1): continue
-            addressList.append(addresses)
+                tr = Traceroute(self.PrintLine, dest)
+                while (tr.IsThreadActive()):
+                    time.sleep(0.01) 
 
-        pointGroups = []
-        for addressGroup in addressList:
-            points = []
-            for address in addressGroup:
-                locator = Geolocator(self.PrintLine)
-                locationInformation = (locator.GetLocationInformation(address))
-                if (locationInformation['status'] == 'fail'): continue
-                lon, lat = locationInformation['lon'], locationInformation['lat']
-                points.append([lon, lat])
-            pointGroups.append(points)
+                addresses = tr.GetAddresses()
+                
+                if (len(addresses) < 1): continue
+                addressList.append(addresses)
 
-        self.RenderPointGroupsToMap(pointGroups)
+            pointGroups = []
+            for addressGroup in addressList:
+                points = []
+                for address in addressGroup:
+                    locator = Geolocator(self.PrintLine)
+                    locationInformation = (locator.GetLocationInformation(address))
+                    if (locationInformation['status'] == 'fail'): continue
+                    lon, lat = locationInformation['lon'], locationInformation['lat']
+                    points.append([lon, lat])
+                pointGroups.append(points)
+
+            self.RenderPointGroupsToMap(pointGroups)
+    
+        threading.Thread(target = worker, daemon = True).start()
         
     def SniffButton(self):
         count = int(self.sniffCount.get())
