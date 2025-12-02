@@ -140,8 +140,6 @@ class UIManager():
                     time.sleep(0.01)
 
                 addresses = tr.GetAddresses()
-                if (len(addresses) < 1): continue
-
                 addressList.append(addresses)
 
             pointGroups = []
@@ -151,13 +149,14 @@ class UIManager():
                 points = []
                 locator = Geolocator(self.PrintLine)
                 for address in addressGroup:
+                    time.sleep(1.0) #Sleep to avoid overloading server with requests
+                    
                     locationInformation = (locator.GetLocationInformation(address))
                     if (locationInformation['status'] == 'fail'): continue
 
                     lon, lat = locationInformation['lon'], locationInformation['lat']
                     points.append([lon, lat])
                 pointGroups.append(points)
-                time.sleep(1.0) #Sleep to avoid overloading server with requests
 
             if (pointGroups): #Update map display after this worker has finished
                 self.root.after(0, lambda: self.RenderPointGroupsToMap(pointGroups))

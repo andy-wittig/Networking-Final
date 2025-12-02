@@ -49,21 +49,29 @@ class Traceroute():
                 if (icmpType == 11): #Intermediate router
                     rtt = (endTime - startTime) * 1000
                     self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    TTL expired\n")
-                    self.addresses.append(reply.src)
-                elif (icmpType == 0): #Destination reached
+                    
+                    if (reply.src not in self.addresses):
+                        self.addresses.append(reply.src)
+                elif (icmpType == 0 or (icmpType == 3 and icmpCode == 3)): #Destination reached
                     rtt = (endTime - startTime) * 1000
                     self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    Destination reached\n")
-                    self.addresses.append(reply.src)
                     self.OutputCallback("Route complete.\n")
+
+                    if (reply.src not in self.addresses):
+                        self.addresses.append(reply.src)
                     break
                 else:
                     rtt = (endTime - startTime) * 1000
                     self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    ICMP type: {icmpType}, Code: {icmpCode}\n")
-                    self.addresses.append(reply.src)
+
+                    if (reply.src not in self.addresses):
+                        self.addresses.append(reply.src)
             else:
                 rtt = (endTime - startTime) * 1000
                 self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    Unkown reply\n")
-                self.addresses.append(reply.src)
+
+                if (reply.src not in self.addresses):
+                    self.addresses.append(reply.src)
 
             ttl += 1
             if (ttl >= maxHops):
