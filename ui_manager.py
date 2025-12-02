@@ -17,6 +17,7 @@ import time
 #Networking Libraries
 from trace_route import Traceroute
 from sniffer import NetworkSniffer
+import ipaddress
 import threading
 
 class UIManager():
@@ -106,44 +107,60 @@ class UIManager():
         self.scrollText.grid(row = 2, column = 0, sticky="nsew", padx = 10, pady = 10)
         self.scrollText.configure(state = "disabled")
 
+    #---UI Helper Functions---
     def PrintLine(self, text):
         self.scrollText.configure(state = "normal")
         self.scrollText.insert(tk.END, text)
         self.scrollText.configure(state = "disabled")
         self.scrollText.see(tk.END)
 
-    def TraceSniffedPackets(self):
-        def worker():
-            if (len(self.sniffedDests) < 1): return #No sniffing results have been generated yet
+    def ClearFrame(self, frame):
+        for widget in frame.winfo_children():
+            widget.destroy()
+    #---------------------------
 
+    def TraceSniffedPackets(self):
+        if (len(self.sniffedDests) < 1): return #No sniffing results have been generated yet
+
+        def worker():
             addressList = []
             for dest in self.sniffedDests:
-                if (dest == "255.255.255.255"): continue #Skip broadcasts
+                #---Clean IP addresses to visit---
+                ip = ipaddress.ip_address(dest)
+                if (ip == ipaddress.ip_address("255.255.255.255")): continue #Skip broadcast addresses
+                if (ip.is_multicast): continue #Skip multicast addresses
+                if (ip.is_loopback): continue
+                if (ip.is_link_local): continue
+                if (ip.is_reserved): continue
+                if (ip.is_private): continue
+                #---------------------------------
 
                 tr = Traceroute(self.PrintLine, dest)
                 while (tr.IsThreadActive()):
-                    time.sleep(0.01) 
+                    time.sleep(0.01)
 
                 addresses = tr.GetAddresses()
-                
                 if (len(addresses) < 1): continue
+
                 addressList.append(addresses)
 
             pointGroups = []
             for index, addressGroup in enumerate(addressList):
-                self.PrintLine(f"Geographic Iteration: {index}\n") #TODO: Find message to display that is more informative!
+                self.PrintLine(f"Geographic Iteration: {index}\n")
+
                 points = []
+                locator = Geolocator(self.PrintLine)
                 for address in addressGroup:
-                    locator = Geolocator(self.PrintLine)
                     locationInformation = (locator.GetLocationInformation(address))
                     if (locationInformation['status'] == 'fail'): continue
 
                     lon, lat = locationInformation['lon'], locationInformation['lat']
                     points.append([lon, lat])
                 pointGroups.append(points)
-                time.sleep(1.5) #Sleep to avoid overloading server with requests
+                time.sleep(1.0) #Sleep to avoid overloading server with requests
 
-            self.RenderPointGroupsToMap(pointGroups)
+            if (pointGroups): #Update map display after this worker has finished
+                self.root.after(0, lambda: self.RenderPointGroupsToMap(pointGroups))
     
         threading.Thread(target = worker, daemon = True).start()
         
@@ -154,9 +171,6 @@ class UIManager():
         
     def SubmitButton(self):
         def worker():
-            #self.scrollText.configure(state='normal')
-            #self.scrollText.delete("1.0", tk.END)
-            #self.scrollText.configure(state='disabled')
             dest = self.entryBox.get()
 
             tr = Traceroute(self.PrintLine, dest)
@@ -167,21 +181,19 @@ class UIManager():
             if (addressList == []): return
 
             points = []
+            locator = Geolocator(self.PrintLine)
             for address in addressList:
-                locator = Geolocator(self.PrintLine)
                 locationInformation = (locator.GetLocationInformation(address))
                 if (locationInformation['status'] == 'fail'): continue
                 lon, lat = locationInformation['lon'], locationInformation['lat']
                 points.append([lon, lat])
 
-            if (points == []): return
-            self.RenderPointsToMap(points)
+            if (points):
+                self.root.after(0, lambda: self.RenderPointsToMap(points))
+        
         threading.Thread(target = worker, daemon = True).start()
 
-    def ClearFrame(self, frame):
-        for widget in frame.winfo_children():
-            widget.destroy()
-
+    #---Tkinter and Matplotlib Integration Functions to Render IP Locations---
     def RenderPointsToMap(self, points): #points[lon, lat]
         #Generate map image around points
         points = np.array(points)
@@ -218,7 +230,6 @@ class UIManager():
         toolbar.pack(fill = "x")
 
     def RenderPointGroupsToMap(self, pointGroups): #[points[lon, lat], ...]
-        print (pointGroups)
         #Generate map image around points
         flatPointsList = []
         for points in pointGroups:

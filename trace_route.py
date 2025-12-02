@@ -8,7 +8,7 @@ import threading
 #--------------------------
 
 class Traceroute():
-    def __init__(self, callback, destination, maxHops = 30, timeout = 2):
+    def __init__(self, callback, destination, maxHops = 30, timeout = 0.3):
         self.OutputCallback = callback
         self.addresses = []
 
@@ -27,18 +27,17 @@ class Traceroute():
         return self.thread.is_alive()
 
     def RunTraceRoute(self, dest, destIP, maxHops, timeout):
-        port = 33434 #Default port for traceroute
         ttl = 1
         
         self.OutputCallback(f"Running trace route for address: {destIP}\n")
         while True:
             ipPacket = IP(dst = dest, ttl = ttl)
-            udpPacket = UDP(dport = port)
+            icmp = ICMP()
 
-            packet = ipPacket / udpPacket #Combine headers
+            packet = ipPacket / icmp #Combine headers
 
             startTime = time.time()
-            reply = sr1(packet, timeout = timeout, verbose = 0) #Send packet and recieve reply
+            reply = self.Probe(packet, timeout) #Send 3 packets and recieve reply
             endTime = time.time()
 
             if (reply is None):
@@ -51,7 +50,7 @@ class Traceroute():
                     rtt = (endTime - startTime) * 1000
                     self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    TTL expired\n")
                     self.addresses.append(reply.src)
-                elif (icmpType == 3 and icmpCode == 3): #Destination reached
+                elif (icmpType == 0): #Destination reached
                     rtt = (endTime - startTime) * 1000
                     self.OutputCallback(f"{ttl:<3}    {reply.src:<15}    {rtt:.2f} ms    Destination reached\n")
                     self.addresses.append(reply.src)
@@ -69,7 +68,12 @@ class Traceroute():
             ttl += 1
             if (ttl >= maxHops):
                 break
-
+    
+    def Probe(self, packet, timeout):
+        for i in range(3):
+            reply = sr1(packet, timeout = timeout, verbose = 0)
+            if (reply): return reply
+        return None
 
     def GetAddresses(self):
         return self.addresses

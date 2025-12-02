@@ -8,7 +8,7 @@ class Geolocator():
 
     def GetLocationInformation(self, ipv4Address):
         try:
-            response = requests.get(f"https://ip-api.com/json/{ipv4Address}", timeout = 5).json()
+            response = requests.get(f"http://ip-api.com/json/{ipv4Address}", timeout = 5).json() #https blocks request requiring API key
         except requests.RequestException as e:
             self.OutputCallback(f"Error locating {ipv4Address:<15}: {e}\n")
             return {'status': 'fail'}
