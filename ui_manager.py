@@ -126,13 +126,17 @@ class UIManager():
             addressList = []
             for dest in self.sniffedDests:
                 #---Clean IP addresses to visit---
+                validIP = True
                 ip = ipaddress.ip_address(dest)
-                if (ip == ipaddress.ip_address("255.255.255.255")): continue #Skip broadcast addresses
-                if (ip.is_multicast): continue #Skip multicast addresses
-                if (ip.is_loopback): continue
-                if (ip.is_link_local): continue
-                if (ip.is_reserved): continue
-                if (ip.is_private): continue
+                if (ip == ipaddress.ip_address("255.255.255.255")): validIP = False #Skip broadcast addresses
+                if (ip.is_multicast): validIP = False #Skip multicast addresses
+                if (ip.is_loopback): validIP = False
+                if (ip.is_link_local): validIP = False
+                if (ip.is_reserved): validIP = False
+                if (ip.is_private): validIP = False
+                if (not validIP):
+                    self.PrintLine(f"The IP address: {dest} could not be geolocated.\n")
+                    continue
                 #---------------------------------
 
                 tr = Traceroute(self.PrintLine, dest)
